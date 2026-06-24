@@ -1,0 +1,26 @@
+{
+  "tests": [
+    {
+      "name": "Login admin",
+      "method": "POST",
+      "path": "/?action=login",
+      "body": {"login": "v.ermikhin@door.su", "password": "heps458loktю"},
+      "expectedStatus": 200,
+      "expectedBody": {"token": "string"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Login wrong password",
+      "method": "POST",
+      "path": "/?action=login",
+      "body": {"login": "v.ermikhin@door.su", "password": "wrong"},
+      "expectedStatus": 401
+    },
+    {
+      "name": "List without token",
+      "method": "GET",
+      "path": "/?action=list",
+      "expectedStatus": 401
+    }
+  ]
+}

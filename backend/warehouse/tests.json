@@ -1,0 +1,16 @@
+{
+  "tests": [
+    {
+      "name": "Products without token",
+      "method": "GET",
+      "path": "/?action=products",
+      "expectedStatus": 401
+    },
+    {
+      "name": "Stock without token",
+      "method": "GET",
+      "path": "/?action=stock",
+      "expectedStatus": 401
+    }
+  ]
+}
