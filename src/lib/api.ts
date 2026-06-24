@@ -37,6 +37,7 @@ export const whApi = {
   productAdd: (name: string, barcode: string) =>
     call(WAREHOUSE_URL, 'product_add', { method: 'POST', body: { name, barcode } }),
   productDelete: (id: number) => call(WAREHOUSE_URL, 'product_delete', { method: 'POST', body: { id } }),
+  productFind: (barcode: string) => call(WAREHOUSE_URL, 'product_find', { query: { barcode } }),
   productsImport: (rows: { name: string; barcode: string }[]) =>
     call(WAREHOUSE_URL, 'products_import', { method: 'POST', body: { rows } }),
   stock: () => call(WAREHOUSE_URL, 'stock'),

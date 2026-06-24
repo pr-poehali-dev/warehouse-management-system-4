@@ -40,11 +40,28 @@ export default function DocumentsSection({ type }: { type: 'income' | 'outcome' 
   const updateItem = (i: number, patch: Partial<DocItem>) =>
     setItems((arr) => arr.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
 
-  const onScan = (barcode: string) => {
-    const idx = items.findIndex((it) => !it.barcode);
-    if (idx >= 0) updateItem(idx, { barcode });
-    else setItems((a) => [...a, { ...empty(), barcode }]);
-    toast.success('Штрих-код добавлен');
+  const onScan = async (barcode: string) => {
+    let product: { name: string } | null = null;
+    try {
+      const res = await whApi.productFind(barcode);
+      product = res.product;
+    } catch {
+      product = null;
+    }
+
+    setItems((arr) => {
+      const existing = arr.findIndex((it) => it.barcode === barcode);
+      if (existing >= 0) {
+        return arr.map((it, idx) => (idx === existing ? { ...it, qty: it.qty + 1 } : it));
+      }
+      const newItem: DocItem = { ...empty(), barcode, name: product?.name || '' };
+      const emptyIdx = arr.findIndex((it) => !it.barcode && !it.name);
+      if (emptyIdx >= 0) return arr.map((it, idx) => (idx === emptyIdx ? newItem : it));
+      return [...arr, newItem];
+    });
+
+    if (product) toast.success(`Товар найден: ${product.name}`);
+    else toast.warning('Товар не в базе — заполните наименование вручную');
   };
 
   const create = async () => {

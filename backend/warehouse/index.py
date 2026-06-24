@@ -77,6 +77,14 @@ def handler(event: dict, context):
                 (name, barcode))
             return _resp(200, {'id': cur.fetchone()[0], 'name': name, 'barcode': barcode})
 
+        if action == 'product_find':
+            barcode = (params.get('barcode') or '').strip()
+            cur.execute("SELECT id, name, barcode FROM products WHERE barcode=%s", (barcode,))
+            r = cur.fetchone()
+            if not r:
+                return _resp(404, {'error': 'Товар не найден'})
+            return _resp(200, {'product': {'id': r[0], 'name': r[1], 'barcode': r[2]}})
+
         if action == 'product_delete':
             cur.execute("DELETE FROM products WHERE id=%s", (body.get('id'),))
             return _resp(200, {'deleted': True})
