@@ -84,7 +84,7 @@ export default function DocumentsSection({ type }: { type: 'income' | 'outcome' 
 
   const downloadPdf = async (d: Doc) => {
     const res = await whApi.documentItems(d.id);
-    generateInvoicePdf(d, res.items);
+    await generateInvoicePdf(d, res.items);
   };
 
   const remove = async (id: number) => {
