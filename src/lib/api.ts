@@ -46,7 +46,13 @@ export const whApi = {
   documentItems: (id: number) => call(WAREHOUSE_URL, 'document_items', { query: { id: String(id) } }),
   documentCreate: (data: { doc_type: 'income' | 'outcome'; party: string; items: DocItem[] }) =>
     call(WAREHOUSE_URL, 'document_create', { method: 'POST', body: data }),
+  documentUpdate: (data: { id: number; party: string; items: DocItem[] }) =>
+    call(WAREHOUSE_URL, 'document_update', { method: 'POST', body: data }),
   documentDelete: (id: number) => call(WAREHOUSE_URL, 'document_delete', { method: 'POST', body: { id } }),
+  intakeItems: () => call(WAREHOUSE_URL, 'intake_items'),
+  stockMove: (data: { barcode: string; from_cell: string; to_cell: string; qty: number }) =>
+    call(WAREHOUSE_URL, 'stock_move', { method: 'POST', body: data }),
+  inventoryCheck: (barcode: string) => call(WAREHOUSE_URL, 'inventory_check', { query: { barcode } }),
 };
 
 export interface DocItem {

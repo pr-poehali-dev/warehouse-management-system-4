@@ -5,18 +5,20 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import LoginScreen from '@/components/LoginScreen';
 import SectionHead from '@/components/sections/SectionHead';
-import ScannerBar from '@/components/sections/ScannerBar';
 import DocumentsSection from '@/components/sections/DocumentsSection';
 import StockSection from '@/components/sections/StockSection';
 import CatalogSection from '@/components/sections/CatalogSection';
 import StaffSection from '@/components/sections/StaffSection';
+import InventorySection from '@/components/sections/InventorySection';
+import PlacementSection from '@/components/sections/PlacementSection';
 import { whApi } from '@/lib/api';
 
-type SectionId = 'dashboard' | 'income' | 'outcome' | 'stock' | 'inventory' | 'catalog' | 'staff';
+type SectionId = 'dashboard' | 'income' | 'placement' | 'outcome' | 'stock' | 'inventory' | 'catalog' | 'staff';
 
 const NAV: { id: SectionId; label: string; icon: string }[] = [
   { id: 'dashboard', label: 'Обзор', icon: 'LayoutDashboard' },
   { id: 'income', label: 'Приход', icon: 'ArrowDownToLine' },
+  { id: 'placement', label: 'Размещение', icon: 'PackageCheck' },
   { id: 'outcome', label: 'Расход', icon: 'ArrowUpFromLine' },
   { id: 'stock', label: 'Остаток', icon: 'Boxes' },
   { id: 'inventory', label: 'Инвентаризация', icon: 'ClipboardCheck' },
@@ -97,20 +99,6 @@ function Dashboard({ go }: { go: (s: SectionId) => void }) {
   );
 }
 
-function InventorySection() {
-  return (
-    <div className="animate-fade-in">
-      <SectionHead title="Инвентаризация" desc="Сверка фактических остатков со складскими данными"
-        action={<Button className="gap-2 bg-accent text-accent-foreground hover:bg-accent/90"><Icon name="ClipboardCheck" size={16} /> Начать инвентаризацию</Button>} />
-      <ScannerBar />
-      <div className="flex items-center gap-3 rounded-2xl border border-dashed bg-card p-5 text-sm text-muted-foreground">
-        <Icon name="Info" size={18} className="text-primary" />
-        Сканируйте товары на полках — система сверит количество с остатками и подсветит расхождения.
-      </div>
-    </div>
-  );
-}
-
 function Index() {
   const { user, loading, logout } = useAuth();
   const [active, setActive] = useState<SectionId>('dashboard');
@@ -181,6 +169,7 @@ function Index() {
             <div className="mx-auto max-w-6xl p-5 md:p-8">
               {active === 'dashboard' && <Dashboard go={setActive} />}
               {active === 'income' && <DocumentsSection type="income" />}
+              {active === 'placement' && <PlacementSection />}
               {active === 'outcome' && <DocumentsSection type="outcome" />}
               {active === 'stock' && <StockSection />}
               {active === 'inventory' && <InventorySection />}

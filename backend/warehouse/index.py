@@ -29,6 +29,9 @@ def _resp(status: int, body):
     }
 
 
+INTAKE_CELL = 'Зона приёмки'
+
+
 def _auth(cur, token):
     if not token:
         return None
@@ -37,6 +40,61 @@ def _auth(cur, token):
         (token,))
     r = cur.fetchone()
     return {'id': r[0], 'role': r[1]} if r else None
+
+
+def _adjust_stock(cur, product_id, cell, delta):
+    cur.execute("SELECT id, qty FROM stock WHERE product_id=%s AND cell=%s", (product_id, cell))
+    srow = cur.fetchone()
+    if srow:
+        new_qty = srow[1] + delta
+        if new_qty <= 0:
+            cur.execute("DELETE FROM stock WHERE id=%s", (srow[0],))
+        else:
+            cur.execute("UPDATE stock SET qty=%s, updated_at=now() WHERE id=%s", (new_qty, srow[0]))
+    elif delta > 0:
+        cur.execute("INSERT INTO stock (product_id, cell, qty) VALUES (%s,%s,%s)", (product_id, cell, delta))
+
+
+def _resolve_product(cur, name, barcode, fallback):
+    cur.execute("SELECT id FROM products WHERE barcode=%s", (barcode,))
+    prow = cur.fetchone()
+    if prow:
+        return prow[0]
+    cur.execute(
+        "INSERT INTO products (name, barcode) VALUES (%s,%s) "
+        "ON CONFLICT (barcode) DO UPDATE SET name=EXCLUDED.name RETURNING id",
+        (name, barcode or fallback))
+    return cur.fetchone()[0]
+
+
+def _apply_document_items(cur, doc_id, doc_type, items):
+    """Создаёт позиции накладной и обновляет остатки. Приход -> Зона приёмки."""
+    for it in items:
+        name = (it.get('name') or '').strip()
+        barcode = (it.get('barcode') or '').strip()
+        qty = int(it.get('qty') or 0)
+        price = float(it.get('price') or 0)
+        if doc_type == 'income':
+            cell = INTAKE_CELL
+        else:
+            cell = (it.get('cell') or '').strip()
+        pid = _resolve_product(cur, name, barcode, f'NB{doc_id}{qty}')
+        cur.execute(
+            "INSERT INTO document_items (document_id, product_id, name, barcode, cell, qty, price) "
+            "VALUES (%s,%s,%s,%s,%s,%s,%s)", (doc_id, pid, name, barcode, cell, qty, price))
+        delta = qty if doc_type == 'income' else -qty
+        _adjust_stock(cur, pid, cell, delta)
+
+
+def _revert_document(cur, doc_id, doc_type):
+    """Откатывает влияние позиций накладной на остатки и удаляет позиции."""
+    cur.execute("SELECT product_id, cell, qty FROM document_items WHERE document_id=%s", (doc_id,))
+    for pid, cell, qty in cur.fetchall():
+        if pid is None:
+            continue
+        delta = -qty if doc_type == 'income' else qty
+        _adjust_stock(cur, pid, cell, delta)
+    cur.execute("DELETE FROM document_items WHERE document_id=%s", (doc_id,))
 
 
 def handler(event: dict, context):
@@ -148,34 +206,79 @@ def handler(event: dict, context):
                 "VALUES (%s,%s,%s,%s,%s) RETURNING id",
                 (doc_number, doc_type, party, total, len(items)))
             doc_id = cur.fetchone()[0]
-            for it in items:
-                name = (it.get('name') or '').strip()
-                barcode = (it.get('barcode') or '').strip()
-                cell = (it.get('cell') or '').strip()
-                qty = int(it.get('qty') or 0)
-                price = float(it.get('price') or 0)
-                cur.execute("SELECT id FROM products WHERE barcode=%s", (barcode,))
-                prow = cur.fetchone()
-                if prow:
-                    pid = prow[0]
-                else:
-                    cur.execute("INSERT INTO products (name, barcode) VALUES (%s,%s) ON CONFLICT (barcode) DO UPDATE SET name=EXCLUDED.name RETURNING id", (name, barcode or f'NB{doc_id}{qty}'))
-                    pid = cur.fetchone()[0]
-                cur.execute(
-                    "INSERT INTO document_items (document_id, product_id, name, barcode, cell, qty, price) "
-                    "VALUES (%s,%s,%s,%s,%s,%s,%s)", (doc_id, pid, name, barcode, cell, qty, price))
-                delta = qty if doc_type == 'income' else -qty
-                cur.execute("SELECT id, qty FROM stock WHERE product_id=%s AND cell=%s", (pid, cell))
-                srow = cur.fetchone()
-                if srow:
-                    cur.execute("UPDATE stock SET qty=qty+%s, updated_at=now() WHERE id=%s", (delta, srow[0]))
-                else:
-                    cur.execute("INSERT INTO stock (product_id, cell, qty) VALUES (%s,%s,%s)", (pid, cell, max(delta, 0)))
+            _apply_document_items(cur, doc_id, doc_type, items)
             return _resp(200, {'id': doc_id, 'doc_number': doc_number, 'total_sum': total, 'items_count': len(items)})
 
+        if action == 'document_update':
+            doc_id = body.get('id')
+            cur.execute("SELECT doc_type FROM documents WHERE id=%s", (doc_id,))
+            drow = cur.fetchone()
+            if not drow:
+                return _resp(404, {'error': 'Накладная не найдена'})
+            doc_type = drow[0]
+            party = (body.get('party') or '').strip()
+            items = body.get('items') or []
+            _revert_document(cur, doc_id, doc_type)
+            _apply_document_items(cur, doc_id, doc_type, items)
+            total = sum(float(i.get('price', 0)) * int(i.get('qty', 0)) for i in items)
+            cur.execute(
+                "UPDATE documents SET party=%s, total_sum=%s, items_count=%s WHERE id=%s",
+                (party, total, len(items), doc_id))
+            return _resp(200, {'id': doc_id, 'total_sum': total, 'items_count': len(items)})
+
         if action == 'document_delete':
+            cur.execute("SELECT doc_type FROM documents WHERE id=%s", (body.get('id'),))
+            drow = cur.fetchone()
+            if drow:
+                _revert_document(cur, body.get('id'), drow[0])
             cur.execute("DELETE FROM documents WHERE id=%s", (body.get('id'),))
             return _resp(200, {'deleted': True})
+
+        # ----- РАЗМЕЩЕНИЕ / ПЕРЕМЕЩЕНИЕ -----
+        if action == 'stock_move':
+            barcode = (body.get('barcode') or '').strip()
+            from_cell = (body.get('from_cell') or '').strip()
+            to_cell = (body.get('to_cell') or '').strip()
+            qty = int(body.get('qty') or 0)
+            if not barcode or not to_cell or qty <= 0:
+                return _resp(400, {'error': 'Укажите товар, ячейку назначения и количество'})
+            cur.execute("SELECT id, name FROM products WHERE barcode=%s", (barcode,))
+            prow = cur.fetchone()
+            if not prow:
+                return _resp(404, {'error': 'Товар не найден'})
+            pid = prow[0]
+            cur.execute("SELECT qty FROM stock WHERE product_id=%s AND cell=%s", (pid, from_cell))
+            srow = cur.fetchone()
+            available = srow[0] if srow else 0
+            if available < qty:
+                return _resp(400, {'error': f'В ячейке «{from_cell or "—"}» доступно только {available} шт'})
+            _adjust_stock(cur, pid, from_cell, -qty)
+            _adjust_stock(cur, pid, to_cell, qty)
+            return _resp(200, {'moved': qty, 'name': prow[1], 'from': from_cell, 'to': to_cell})
+
+        if action == 'intake_items':
+            cur.execute(
+                "SELECT s.id, p.name, p.barcode, s.cell, s.qty FROM stock s "
+                "JOIN products p ON p.id=s.product_id WHERE s.cell=%s AND s.qty>0 ORDER BY s.id DESC",
+                (INTAKE_CELL,))
+            return _resp(200, {'intake_cell': INTAKE_CELL, 'items': [
+                {'id': r[0], 'name': r[1], 'barcode': r[2], 'cell': r[3], 'qty': r[4]} for r in cur.fetchall()]})
+
+        # ----- ИНВЕНТАРИЗАЦИЯ -----
+        if action == 'inventory_check':
+            barcode = (params.get('barcode') or '').strip()
+            cur.execute("SELECT id, name FROM products WHERE barcode=%s", (barcode,))
+            prow = cur.fetchone()
+            if not prow:
+                return _resp(404, {'error': 'Товар не найден в базе'})
+            pid = prow[0]
+            cur.execute(
+                "SELECT cell, qty FROM stock WHERE product_id=%s AND qty>0 ORDER BY cell", (pid,))
+            cells = [{'cell': r[0], 'qty': r[1]} for r in cur.fetchall()]
+            total = sum(c['qty'] for c in cells)
+            return _resp(200, {
+                'product': {'id': pid, 'name': prow[1], 'barcode': barcode},
+                'system_qty': total, 'cells': cells})
 
         return _resp(400, {'error': 'Неизвестное действие'})
     finally:
