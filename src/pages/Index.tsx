@@ -116,7 +116,7 @@ function Index() {
   const initials = user.name.split(' ').map((w) => w[0]).join('').slice(0, 2);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
       <div className="flex min-h-screen">
         <aside className="hidden w-64 shrink-0 flex-col border-r bg-card lg:flex">
           <div className="flex items-center gap-3 border-b px-6 py-5">
@@ -145,9 +145,9 @@ function Index() {
           </div>
         </aside>
 
-        <main className="flex-1">
-          <header className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b bg-card/80 px-5 py-3 backdrop-blur md:px-8">
-            <div className="flex items-center gap-2 overflow-x-auto lg:hidden">
+        <main className="min-w-0 flex-1">
+          <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b bg-card/80 px-4 py-3 backdrop-blur md:px-8">
+            <div className="flex flex-1 items-center gap-2 overflow-x-auto lg:hidden">
               {NAV.map((n) => (
                 <button key={n.id} onClick={() => setActive(n.id)}
                   className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium ${active === n.id ? 'bg-primary text-primary-foreground' : 'bg-secondary text-muted-foreground'}`}>
@@ -155,9 +155,9 @@ function Index() {
                 </button>
               ))}
             </div>
-            <div className="ml-auto flex items-center gap-3">
+            <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
               <Badge variant="secondary" className="hidden gap-1.5 py-1.5 sm:flex"><Icon name="MapPin" size={13} className="text-primary" /> Склад №1</Badge>
-              <div className="flex items-center gap-2 rounded-xl border bg-background px-3 py-1.5">
+              <div className="flex items-center gap-2 rounded-xl border bg-background px-2 py-1.5 sm:px-3">
                 <div className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-foreground">{initials}</div>
                 <span className="hidden text-sm font-medium sm:block">{user.name}</span>
               </div>
@@ -166,7 +166,7 @@ function Index() {
           </header>
 
           <div className="grid-bg">
-            <div className="mx-auto max-w-6xl p-5 md:p-8">
+            <div className="mx-auto max-w-6xl p-4 md:p-8">
               {active === 'dashboard' && <Dashboard go={setActive} />}
               {active === 'income' && <DocumentsSection type="income" />}
               {active === 'placement' && <PlacementSection />}

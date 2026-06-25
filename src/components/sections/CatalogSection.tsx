@@ -89,7 +89,12 @@ export default function CatalogSection() {
         </p>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border bg-card">
+      {rows.length === 0 && (
+        <div className="rounded-2xl border bg-card py-10 text-center text-muted-foreground">База товаров пуста</div>
+      )}
+
+      {/* Десктоп */}
+      <div className="hidden overflow-x-auto rounded-2xl border bg-card md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -98,9 +103,6 @@ export default function CatalogSection() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.length === 0 && (
-              <TableRow><TableCell colSpan={3} className="py-10 text-center text-muted-foreground">База товаров пуста</TableCell></TableRow>
-            )}
             {rows.map((r) => (
               <TableRow key={r.id}>
                 <TableCell className="font-semibold">{r.name}</TableCell>
@@ -114,6 +116,21 @@ export default function CatalogSection() {
             ))}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Мобильный */}
+      <div className="space-y-3 md:hidden">
+        {rows.map((r) => (
+          <div key={r.id} className="flex items-center justify-between gap-2 rounded-2xl border bg-card p-4">
+            <div className="min-w-0">
+              <div className="font-semibold">{r.name}</div>
+              <div className="font-mono text-xs text-muted-foreground">{r.barcode}</div>
+            </div>
+            <Button size="sm" variant="ghost" className="shrink-0 text-destructive" onClick={() => remove(r.id)}>
+              <Icon name="Trash2" size={14} />
+            </Button>
+          </div>
+        ))}
       </div>
     </div>
   );

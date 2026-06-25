@@ -70,12 +70,17 @@ export default function StockSection() {
     <div className="animate-fade-in">
       <SectionHead title="Остаток" desc="Актуальные остатки с привязкой к адресу хранения"
         action={
-          <div className="relative">
+          <div className="relative w-full sm:w-56">
             <Icon name="Search" size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder="Поиск товара…" className="w-56 pl-9" value={q} onChange={(e) => setQ(e.target.value)} />
+            <Input placeholder="Поиск товара…" className="w-full pl-9" value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
         } />
-      <div className="overflow-x-auto rounded-2xl border bg-card">
+      {filtered.length === 0 && (
+        <div className="rounded-2xl border bg-card py-10 text-center text-muted-foreground">Остатков пока нет</div>
+      )}
+
+      {/* Десктоп */}
+      <div className="hidden overflow-x-auto rounded-2xl border bg-card md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -85,9 +90,6 @@ export default function StockSection() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 && (
-              <TableRow><TableCell colSpan={5} className="py-10 text-center text-muted-foreground">Остатков пока нет</TableCell></TableRow>
-            )}
             {filtered.map((r) => (
               <TableRow key={r.id}>
                 <TableCell className="font-semibold">{r.name}</TableCell>
@@ -101,7 +103,7 @@ export default function StockSection() {
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
                     <Button size="sm" variant="ghost" className="gap-1.5" onClick={() => startMove(r)}>
-                      <Icon name="ArrowRightLeft" size={14} /> <span className="hidden sm:inline">Переместить</span>
+                      <Icon name="ArrowRightLeft" size={14} /> Переместить
                     </Button>
                     <Button size="sm" variant="ghost" className="text-destructive" onClick={() => remove(r.id)}>
                       <Icon name="Trash2" size={14} />
@@ -112,6 +114,34 @@ export default function StockSection() {
             ))}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Мобильный */}
+      <div className="space-y-3 md:hidden">
+        {filtered.map((r) => (
+          <div key={r.id} className="rounded-2xl border bg-card p-4">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="font-semibold">{r.name}</div>
+                <div className="font-mono text-xs text-muted-foreground">{r.barcode}</div>
+              </div>
+              <span className={`shrink-0 font-bold ${r.qty < 80 ? 'text-destructive' : ''}`}>{r.qty} шт</span>
+            </div>
+            <div className="mt-2">
+              <Badge variant="secondary" className="gap-1 font-mono">
+                <Icon name="MapPin" size={11} className="text-primary" />{r.cell || '—'}
+              </Badge>
+            </div>
+            <div className="mt-3 flex gap-2 border-t pt-3">
+              <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => startMove(r)}>
+                <Icon name="ArrowRightLeft" size={14} /> Переместить
+              </Button>
+              <Button size="sm" variant="outline" className="text-destructive" onClick={() => remove(r.id)}>
+                <Icon name="Trash2" size={14} />
+              </Button>
+            </div>
+          </div>
+        ))}
       </div>
 
       <Dialog open={moveOpen} onOpenChange={setMoveOpen}>

@@ -77,7 +77,8 @@ export default function StaffSection() {
             </DialogContent>
           </Dialog>
         )} />
-      <div className="overflow-x-auto rounded-2xl border bg-card">
+      {/* Десктоп */}
+      <div className="hidden overflow-x-auto rounded-2xl border bg-card md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -116,6 +117,37 @@ export default function StaffSection() {
             ))}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Мобильный */}
+      <div className="space-y-3 md:hidden">
+        {rows.map((r) => (
+          <div key={r.id} className="rounded-2xl border bg-card p-4">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                  {r.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}
+                </div>
+                <div className="min-w-0">
+                  <div className="font-semibold">{r.name}</div>
+                  <div className="truncate text-xs text-muted-foreground">{r.login}</div>
+                </div>
+              </div>
+              {isAdmin && r.login !== 'v.ermikhin@door.su' && (
+                <Button size="sm" variant="ghost" className="shrink-0 text-destructive" onClick={() => remove(r.id)}>
+                  <Icon name="Trash2" size={14} />
+                </Button>
+              )}
+            </div>
+            <div className="mt-3 flex items-center gap-3 border-t pt-3">
+              <Badge variant={r.role === 'admin' ? 'default' : 'secondary'}>{ROLE_LABEL[r.role] || r.role}</Badge>
+              <span className={`inline-flex items-center gap-1.5 text-sm ${r.active ? 'text-accent' : 'text-muted-foreground'}`}>
+                <span className={`h-2 w-2 rounded-full ${r.active ? 'bg-accent' : 'bg-muted-foreground'}`} />
+                {r.active ? 'Активен' : 'Отключён'}
+              </span>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -180,7 +180,12 @@ export default function DocumentsSection({ type }: { type: 'income' | 'outcome' 
         </DialogContent>
       </Dialog>
 
-      <div className="overflow-x-auto rounded-2xl border bg-card">
+      {docs.length === 0 && (
+        <div className="rounded-2xl border bg-card py-10 text-center text-muted-foreground">Накладных пока нет</div>
+      )}
+
+      {/* Десктоп: таблица */}
+      <div className="hidden overflow-x-auto rounded-2xl border bg-card md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -191,9 +196,6 @@ export default function DocumentsSection({ type }: { type: 'income' | 'outcome' 
             </TableRow>
           </TableHeader>
           <TableBody>
-            {docs.length === 0 && (
-              <TableRow><TableCell colSpan={6} className="py-10 text-center text-muted-foreground">Накладных пока нет</TableCell></TableRow>
-            )}
             {docs.map((d) => (
               <TableRow key={d.id}>
                 <TableCell className="font-semibold">{d.doc_number}</TableCell>
@@ -204,10 +206,10 @@ export default function DocumentsSection({ type }: { type: 'income' | 'outcome' 
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
                     <Button size="sm" variant="ghost" className="gap-1.5" onClick={() => openEdit(d)}>
-                      <Icon name="Pencil" size={14} /> <span className="hidden sm:inline">Изменить</span>
+                      <Icon name="Pencil" size={14} /> Изменить
                     </Button>
                     <Button size="sm" variant="ghost" className="gap-1.5" onClick={() => downloadPdf(d)}>
-                      <Icon name="FileDown" size={14} /> <span className="hidden sm:inline">PDF</span>
+                      <Icon name="FileDown" size={14} /> PDF
                     </Button>
                     <Button size="sm" variant="ghost" className="text-destructive" onClick={() => remove(d.id)}>
                       <Icon name="Trash2" size={14} />
@@ -218,6 +220,39 @@ export default function DocumentsSection({ type }: { type: 'income' | 'outcome' 
             ))}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Мобильный: карточки */}
+      <div className="space-y-3 md:hidden">
+        {docs.map((d) => (
+          <div key={d.id} className="rounded-2xl border bg-card p-4">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <div className="font-display font-bold">{d.doc_number}</div>
+                <div className="text-xs text-muted-foreground">{new Date(d.created_at).toLocaleDateString('ru-RU')}</div>
+              </div>
+              <div className="text-right">
+                <div className="font-bold">{d.total_sum.toLocaleString('ru-RU')} ₽</div>
+                <div className="text-xs text-muted-foreground">{d.items_count} поз.</div>
+              </div>
+            </div>
+            <div className="mt-2 text-sm">
+              <span className="text-muted-foreground">{isIncome ? 'Поставщик: ' : 'Получатель: '}</span>
+              {d.party || '—'}
+            </div>
+            <div className="mt-3 flex gap-2 border-t pt-3">
+              <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => openEdit(d)}>
+                <Icon name="Pencil" size={14} /> Изменить
+              </Button>
+              <Button size="sm" variant="outline" className="flex-1 gap-1.5" onClick={() => downloadPdf(d)}>
+                <Icon name="FileDown" size={14} /> PDF
+              </Button>
+              <Button size="sm" variant="outline" className="text-destructive" onClick={() => remove(d.id)}>
+                <Icon name="Trash2" size={14} />
+              </Button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

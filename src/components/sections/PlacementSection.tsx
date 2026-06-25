@@ -105,7 +105,12 @@ export default function PlacementSection() {
         </DialogContent>
       </Dialog>
 
-      <div className="overflow-x-auto rounded-2xl border bg-card">
+      {items.length === 0 && (
+        <div className="rounded-2xl border bg-card py-10 text-center text-muted-foreground">Зона приёмки пуста — весь товар размещён</div>
+      )}
+
+      {/* Десктоп */}
+      <div className="hidden overflow-x-auto rounded-2xl border bg-card md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -114,9 +119,6 @@ export default function PlacementSection() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.length === 0 && (
-              <TableRow><TableCell colSpan={4} className="py-10 text-center text-muted-foreground">Зона приёмки пуста — весь товар размещён</TableCell></TableRow>
-            )}
             {items.map((it) => (
               <TableRow key={it.id}>
                 <TableCell className="font-semibold">{it.name}</TableCell>
@@ -131,6 +133,24 @@ export default function PlacementSection() {
             ))}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Мобильный */}
+      <div className="space-y-3 md:hidden">
+        {items.map((it) => (
+          <div key={it.id} className="rounded-2xl border bg-card p-4">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="font-semibold">{it.name}</div>
+                <div className="font-mono text-xs text-muted-foreground">{it.barcode}</div>
+              </div>
+              <Badge variant="secondary" className="shrink-0 font-bold">{it.qty} шт</Badge>
+            </div>
+            <Button size="sm" className="mt-3 w-full gap-1.5" onClick={() => startPlacement(it)}>
+              <Icon name="ArrowRightLeft" size={14} /> Разместить
+            </Button>
+          </div>
+        ))}
       </div>
     </div>
   );

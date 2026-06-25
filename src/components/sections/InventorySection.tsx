@@ -102,7 +102,12 @@ export default function InventorySection() {
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border bg-card">
+      {rows.length === 0 && (
+        <div className="rounded-2xl border bg-card py-10 text-center text-muted-foreground">Отсканируйте первый товар</div>
+      )}
+
+      {/* Десктоп */}
+      <div className="hidden overflow-x-auto rounded-2xl border bg-card md:block">
         <Table>
           <TableHeader>
             <TableRow>
@@ -112,9 +117,6 @@ export default function InventorySection() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.length === 0 && (
-              <TableRow><TableCell colSpan={6} className="py-10 text-center text-muted-foreground">Отсканируйте первый товар</TableCell></TableRow>
-            )}
             {rows.map((r) => {
               const diff = r.factQty - r.systemQty;
               return (
@@ -148,6 +150,43 @@ export default function InventorySection() {
             })}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Мобильный */}
+      <div className="space-y-3 md:hidden">
+        {rows.map((r) => {
+          const diff = r.factQty - r.systemQty;
+          return (
+            <div key={r.barcode} className="rounded-2xl border bg-card p-4">
+              <div className="font-semibold">{r.name}</div>
+              <div className="font-mono text-xs text-muted-foreground">{r.barcode}</div>
+              {r.cells.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {r.cells.map((c) => (
+                    <Badge key={c.cell} variant="secondary" className="font-mono text-xs">{c.cell}: {c.qty}</Badge>
+                  ))}
+                </div>
+              )}
+              <div className="mt-3 flex items-center justify-between gap-3 border-t pt-3">
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Учёт: </span><b>{r.systemQty}</b>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Факт</span>
+                  <Input type="number" value={r.factQty} className="h-9 w-20"
+                    onChange={(e) => setFact(r.barcode, Number(e.target.value))} />
+                </div>
+                {diff === 0 ? (
+                  <span className="inline-flex items-center gap-1 text-sm text-accent"><Icon name="Check" size={14} /> ОК</span>
+                ) : (
+                  <span className={`inline-flex items-center gap-1 text-sm font-bold ${diff > 0 ? 'text-primary' : 'text-destructive'}`}>
+                    <Icon name={diff > 0 ? 'TrendingUp' : 'TrendingDown'} size={14} /> {diff > 0 ? `+${diff}` : diff}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
