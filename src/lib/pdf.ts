@@ -1,5 +1,3 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import type { DocItem } from './api';
 
 interface DocMeta {
@@ -9,87 +7,90 @@ interface DocMeta {
   created_at?: string;
 }
 
-// jsPDF поддерживает только TTF/OTF (не WOFF!)
-const FONT_URL = 'https://cdn.jsdelivr.net/gh/google/fonts/apache/roboto/static/Roboto-Regular.ttf';
-let fontBase64: string | null = null;
-
-function arrayBufferToBase64(buffer: ArrayBuffer): string {
-  let binary = '';
-  const bytes = new Uint8Array(buffer);
-  const chunk = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunk)));
-  }
-  return btoa(binary);
-}
-
-async function ensureFont(pdf: jsPDF): Promise<boolean> {
-  try {
-    if (!fontBase64) {
-      const res = await fetch(FONT_URL);
-      if (!res.ok) return false;
-      const buf = await res.arrayBuffer();
-      fontBase64 = arrayBufferToBase64(buf);
-    }
-    pdf.addFileToVFS('Roboto-Regular.ttf', fontBase64);
-    pdf.addFont('Roboto-Regular.ttf', 'Roboto', 'normal');
-    return true;
-  } catch {
-    return false;
-  }
+function esc(s: unknown): string {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 export async function generateInvoicePdf(doc: DocMeta, items: DocItem[]) {
-  const pdf = new jsPDF();
-  const ok = await ensureFont(pdf);
-  const font = ok ? 'Roboto' : 'helvetica';
-
   const title = doc.doc_type === 'income' ? 'ПРИХОДНАЯ НАКЛАДНАЯ' : 'РАСХОДНАЯ НАКЛАДНАЯ';
-
-  pdf.setFont(font, 'normal');
-  pdf.setFontSize(16);
-  pdf.text(title, 14, 20);
-  pdf.setFontSize(11);
-  pdf.text(`Номер: ${doc.doc_number}`, 14, 30);
-  pdf.text(`${doc.doc_type === 'income' ? 'Поставщик' : 'Получатель'}: ${doc.party || '-'}`, 14, 37);
-  if (doc.created_at) pdf.text(`Дата: ${new Date(doc.created_at).toLocaleDateString('ru-RU')}`, 14, 44);
-
-  const rows = items.map((it, i) => [
-    i + 1,
-    it.name,
-    it.barcode,
-    it.cell,
-    it.qty,
-    it.price.toFixed(2),
-    (it.qty * it.price).toFixed(2),
-  ]);
+  const partyLabel = doc.doc_type === 'income' ? 'Поставщик' : 'Получатель';
+  const dateStr = doc.created_at ? new Date(doc.created_at).toLocaleDateString('ru-RU') : '';
   const total = items.reduce((s, it) => s + it.qty * it.price, 0);
 
-  autoTable(pdf, {
-    startY: 50,
-    head: [['№', 'Наименование', 'Штрих-код', 'Ячейка', 'Кол-во', 'Цена', 'Сумма']],
-    body: rows,
-    styles: { fontSize: 9, font },
-    headStyles: { fillColor: [37, 64, 220], font, textColor: 255 },
-    footStyles: { fillColor: [240, 240, 245], textColor: 20, fontStyle: 'bold', font },
-    foot: [['', '', '', '', '', 'Итого:', total.toFixed(2)]],
-  });
+  const rowsHtml = items
+    .map(
+      (it, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td class="left">${esc(it.name)}</td>
+        <td>${esc(it.barcode)}</td>
+        <td>${esc(it.cell)}</td>
+        <td>${esc(it.qty)}</td>
+        <td>${it.price.toFixed(2)}</td>
+        <td>${(it.qty * it.price).toFixed(2)}</td>
+      </tr>`
+    )
+    .join('');
 
-  const fileName = `${doc.doc_number}.pdf`;
+  const html = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>${esc(doc.doc_number)}</title>
+<style>
+  * { font-family: Arial, "Segoe UI", "Helvetica Neue", sans-serif; }
+  body { margin: 24px; color: #111; }
+  h1 { font-size: 18px; margin: 0 0 14px; }
+  .meta { font-size: 13px; line-height: 1.6; margin-bottom: 18px; }
+  .meta b { display: inline-block; min-width: 90px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { background: #2540dc; color: #fff; padding: 7px 6px; text-align: center; }
+  td { padding: 6px; border-bottom: 1px solid #e5e7eb; text-align: center; }
+  td.left { text-align: left; }
+  tfoot td { font-weight: bold; background: #f0f0f5; }
+  .right { text-align: right; }
+  @media print { body { margin: 0; padding: 16px; } }
+</style>
+</head>
+<body>
+  <h1>${title}</h1>
+  <div class="meta">
+    <div><b>Номер:</b> ${esc(doc.doc_number)}</div>
+    <div><b>${partyLabel}:</b> ${esc(doc.party || '-')}</div>
+    ${dateStr ? `<div><b>Дата:</b> ${dateStr}</div>` : ''}
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>№</th><th>Наименование</th><th>Штрих-код</th><th>Ячейка</th>
+        <th>Кол-во</th><th>Цена</th><th>Сумма</th>
+      </tr>
+    </thead>
+    <tbody>${rowsHtml}</tbody>
+    <tfoot>
+      <tr>
+        <td colspan="6" class="right">Итого:</td>
+        <td>${total.toFixed(2)}</td>
+      </tr>
+    </tfoot>
+  </table>
+  <script>
+    window.onload = function () {
+      window.focus();
+      window.print();
+    };
+  </script>
+</body>
+</html>`;
 
-  // Надёжное скачивание: на мобильных pdf.save может не сработать,
-  // поэтому открываем blob через ссылку вручную.
-  try {
-    const blob = pdf.output('blob');
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 4000);
-  } catch {
-    pdf.save(fileName);
+  const win = window.open('', '_blank');
+  if (!win) {
+    throw new Error('Разрешите всплывающие окна, чтобы скачать PDF');
   }
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
 }

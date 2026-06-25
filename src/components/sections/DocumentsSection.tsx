@@ -105,7 +105,7 @@ export default function DocumentsSection({ type }: { type: 'income' | 'outcome' 
     try {
       const res = await whApi.documentItems(d.id);
       await generateInvoicePdf(d, res.items);
-      toast.success('PDF сформирован');
+      toast.success('Откройте печать → «Сохранить как PDF»');
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Не удалось сформировать PDF');
     }
