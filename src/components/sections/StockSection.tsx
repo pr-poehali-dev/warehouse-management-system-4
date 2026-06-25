@@ -75,7 +75,7 @@ export default function StockSection() {
             <Input placeholder="Поиск товара…" className="w-56 pl-9" value={q} onChange={(e) => setQ(e.target.value)} />
           </div>
         } />
-      <div className="overflow-hidden rounded-2xl border bg-card">
+      <div className="overflow-x-auto rounded-2xl border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
@@ -101,7 +101,7 @@ export default function StockSection() {
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
                     <Button size="sm" variant="ghost" className="gap-1.5" onClick={() => startMove(r)}>
-                      <Icon name="ArrowRightLeft" size={14} /> Переместить
+                      <Icon name="ArrowRightLeft" size={14} /> <span className="hidden sm:inline">Переместить</span>
                     </Button>
                     <Button size="sm" variant="ghost" className="text-destructive" onClick={() => remove(r.id)}>
                       <Icon name="Trash2" size={14} />

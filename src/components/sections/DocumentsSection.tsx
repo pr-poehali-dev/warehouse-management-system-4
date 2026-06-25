@@ -102,8 +102,13 @@ export default function DocumentsSection({ type }: { type: 'income' | 'outcome' 
   };
 
   const downloadPdf = async (d: Doc) => {
-    const res = await whApi.documentItems(d.id);
-    await generateInvoicePdf(d, res.items);
+    try {
+      const res = await whApi.documentItems(d.id);
+      await generateInvoicePdf(d, res.items);
+      toast.success('PDF сформирован');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Не удалось сформировать PDF');
+    }
   };
 
   const remove = async (id: number) => {
@@ -125,7 +130,7 @@ export default function DocumentsSection({ type }: { type: 'income' | 'outcome' 
       />
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-h-[92vh] max-w-3xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editId ? 'Редактирование накладной' : isIncome ? 'Приходная накладная' : 'Расходная накладная'}
@@ -139,17 +144,25 @@ export default function DocumentsSection({ type }: { type: 'income' | 'outcome' 
           )}
           <ScannerBar onScan={onScan} />
           <Input placeholder={isIncome ? 'Поставщик' : 'Получатель'} value={party} onChange={(e) => setParty(e.target.value)} />
-          <div className="max-h-72 space-y-2 overflow-y-auto">
+          <div className="max-h-72 space-y-3 overflow-y-auto sm:space-y-2">
             {items.map((it, i) => (
-              <div key={i} className="grid grid-cols-12 gap-2">
-                <Input className="col-span-4" placeholder="Наименование" value={it.name} onChange={(e) => updateItem(i, { name: e.target.value })} />
-                <Input className={isIncome ? 'col-span-4' : 'col-span-3'} placeholder="Штрих-код" value={it.barcode} onChange={(e) => updateItem(i, { barcode: e.target.value })} />
+              <div key={i} className="relative rounded-xl border p-3 sm:grid sm:grid-cols-12 sm:gap-2 sm:rounded-none sm:border-0 sm:p-0">
+                <div className="mb-2 flex items-center justify-between sm:hidden">
+                  <span className="text-xs font-semibold text-muted-foreground">Позиция {i + 1}</span>
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setItems((a) => a.filter((_, idx) => idx !== i))}>
+                    <Icon name="X" size={14} />
+                  </Button>
+                </div>
+                <Input className="mb-2 sm:col-span-4 sm:mb-0" placeholder="Наименование" value={it.name} onChange={(e) => updateItem(i, { name: e.target.value })} />
+                <Input className={`mb-2 sm:mb-0 ${isIncome ? 'sm:col-span-4' : 'sm:col-span-3'}`} placeholder="Штрих-код" value={it.barcode} onChange={(e) => updateItem(i, { barcode: e.target.value })} />
                 {!isIncome && (
-                  <Input className="col-span-2" placeholder="Ячейка" value={it.cell} onChange={(e) => updateItem(i, { cell: e.target.value })} />
+                  <Input className="mb-2 sm:col-span-2 sm:mb-0" placeholder="Ячейка" value={it.cell} onChange={(e) => updateItem(i, { cell: e.target.value })} />
                 )}
-                <Input className="col-span-1" type="number" placeholder="Кол" value={it.qty} onChange={(e) => updateItem(i, { qty: Number(e.target.value) })} />
-                <Input className="col-span-2" type="number" placeholder="Цена" value={it.price} onChange={(e) => updateItem(i, { price: Number(e.target.value) })} />
-                <Button variant="ghost" size="icon" className="col-span-1 text-destructive" onClick={() => setItems((a) => a.filter((_, idx) => idx !== i))}>
+                <div className="grid grid-cols-2 gap-2 sm:contents">
+                  <Input className="sm:col-span-1" type="number" placeholder="Кол-во" value={it.qty} onChange={(e) => updateItem(i, { qty: Number(e.target.value) })} />
+                  <Input className="sm:col-span-2" type="number" placeholder="Цена" value={it.price} onChange={(e) => updateItem(i, { price: Number(e.target.value) })} />
+                </div>
+                <Button variant="ghost" size="icon" className="hidden text-destructive sm:col-span-1 sm:flex" onClick={() => setItems((a) => a.filter((_, idx) => idx !== i))}>
                   <Icon name="X" size={14} />
                 </Button>
               </div>
@@ -167,7 +180,7 @@ export default function DocumentsSection({ type }: { type: 'income' | 'outcome' 
         </DialogContent>
       </Dialog>
 
-      <div className="overflow-hidden rounded-2xl border bg-card">
+      <div className="overflow-x-auto rounded-2xl border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
@@ -191,10 +204,10 @@ export default function DocumentsSection({ type }: { type: 'income' | 'outcome' 
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-1">
                     <Button size="sm" variant="ghost" className="gap-1.5" onClick={() => openEdit(d)}>
-                      <Icon name="Pencil" size={14} /> Изменить
+                      <Icon name="Pencil" size={14} /> <span className="hidden sm:inline">Изменить</span>
                     </Button>
                     <Button size="sm" variant="ghost" className="gap-1.5" onClick={() => downloadPdf(d)}>
-                      <Icon name="FileDown" size={14} /> PDF
+                      <Icon name="FileDown" size={14} /> <span className="hidden sm:inline">PDF</span>
                     </Button>
                     <Button size="sm" variant="ghost" className="text-destructive" onClick={() => remove(d.id)}>
                       <Icon name="Trash2" size={14} />

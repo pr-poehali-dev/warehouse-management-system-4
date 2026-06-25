@@ -80,7 +80,7 @@ export default function CatalogSection() {
           </div>
         } />
 
-      <div className="mb-6 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed bg-card p-10 text-center transition hover:border-primary"
+      <div className="mb-6 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed bg-card p-6 text-center transition hover:border-primary sm:p-10"
         onClick={() => fileRef.current?.click()}>
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/15 text-accent"><Icon name="CloudUpload" size={28} /></div>
         <div className="font-display text-lg font-bold">Загрузите файл Excel</div>
@@ -89,7 +89,7 @@ export default function CatalogSection() {
         </p>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border bg-card">
+      <div className="overflow-x-auto rounded-2xl border bg-card">
         <Table>
           <TableHeader>
             <TableRow>

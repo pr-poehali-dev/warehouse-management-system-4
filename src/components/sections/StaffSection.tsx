@@ -77,7 +77,7 @@ export default function StaffSection() {
             </DialogContent>
           </Dialog>
         )} />
-      <div className="overflow-hidden rounded-2xl border bg-card">
+      <div className="overflow-x-auto rounded-2xl border bg-card">
         <Table>
           <TableHeader>
             <TableRow>
